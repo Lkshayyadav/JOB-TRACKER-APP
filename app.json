@@ -29,6 +29,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d01a050c-5ac3-4e36-833f-25b876065394"
+      }
+    },
+    "owner": "lkshay"
   }
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,8 +10,10 @@ import {
   RefreshControl,
   Linking,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
 import {
   Globe,
   Plus,
@@ -43,11 +45,11 @@ const COLOR_PRESETS = [
 
 export default function PlatformsScreen() {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingPlatform, setEditingPlatform] = useState<Platform | null>(null);
 
-  // Form State (Matching Web Exactly)
+  // Form State
   const [name, setName] = useState("");
   const [website, setWebsite] = useState("");
   const [logo, setLogo] = useState("");
@@ -57,26 +59,33 @@ export default function PlatformsScreen() {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
 
-  const loadPlatforms = async () => {
+  const loadPlatforms = useCallback(async () => {
     setLoading(true);
     try {
       const data = await PlatformAPI.getPlatformStats();
-      setPlatforms(data);
+      if (Array.isArray(data)) {
+        setPlatforms(data);
+      } else {
+        const raw = await PlatformAPI.getPlatforms();
+        if (Array.isArray(raw)) setPlatforms(raw);
+      }
     } catch {
       try {
-        const data = await PlatformAPI.getPlatforms();
-        setPlatforms(data);
+        const raw = await PlatformAPI.getPlatforms();
+        if (Array.isArray(raw)) setPlatforms(raw);
       } catch {
         // ignore
       }
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadPlatforms();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadPlatforms();
+    }, [loadPlatforms])
+  );
 
   const handleOpenCreate = () => {
     setEditingPlatform(null);
@@ -174,99 +183,106 @@ export default function PlatformsScreen() {
           onPress={handleOpenCreate}
           style={styles.addBtn}
         >
-          <Plus size={18} color={COLORS.onPrimary} />
+          <Plus size={16} color={COLORS.onPrimary} />
           <Text style={styles.addBtnText}>+ Add Platform</Text>
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={platforms}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={loadPlatforms}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
-          />
-        }
-        renderItem={({ item }) => {
-          const itemColor = item.color || COLORS.primary;
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color={COLORS.primary} size="large" />
+          <Text style={styles.loadingText}>Syncing Platform Sources...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={platforms}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={loadPlatforms}
+              tintColor={COLORS.primary}
+              colors={[COLORS.primary]}
+            />
+          }
+          renderItem={({ item }) => {
+            const itemColor = item.color || COLORS.primary;
 
-          return (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.headerLeft}>
-                  <View style={[styles.platformIcon, { backgroundColor: `${itemColor}20`, borderColor: itemColor }]}>
-                    <Globe size={18} color={itemColor} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.titleRow}>
-                      <Text style={styles.platformName} numberOfLines={1}>
-                        {item.name}
-                      </Text>
-                      {item.isDefault && (
-                        <View style={styles.defaultBadge}>
-                          <Star size={10} color={COLORS.primary} />
-                          <Text style={styles.defaultText}>Default</Text>
-                        </View>
+            return (
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.headerLeft}>
+                    <View style={[styles.platformIcon, { backgroundColor: `${itemColor}20`, borderColor: itemColor }]}>
+                      <Globe size={18} color={itemColor} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.titleRow}>
+                        <Text style={styles.platformName} numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                        {item.isDefault && (
+                          <View style={styles.defaultBadge}>
+                            <Star size={10} color={COLORS.primary} />
+                            <Text style={styles.defaultText}>Default</Text>
+                          </View>
+                        )}
+                      </View>
+                      {item.url ? (
+                        <TouchableOpacity onPress={() => handleOpenUrl(item.url)} style={styles.urlRow}>
+                          <Text style={styles.urlText} numberOfLines={1}>
+                            {item.url}
+                          </Text>
+                          <ExternalLink size={11} color={COLORS.textMuted} />
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={styles.noUrlText}>No URL added</Text>
                       )}
                     </View>
-                    {item.url ? (
-                      <TouchableOpacity onPress={() => handleOpenUrl(item.url)} style={styles.urlRow}>
-                        <Text style={styles.urlText} numberOfLines={1}>
-                          {item.url}
-                        </Text>
-                        <ExternalLink size={11} color={COLORS.textMuted} />
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={styles.noUrlText}>No URL added</Text>
-                    )}
+                  </View>
+
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity onPress={() => handleOpenEdit(item)} style={styles.actionBtn}>
+                      <Edit2 size={15} color={COLORS.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDelete(item)} style={styles.actionBtn}>
+                      <Trash2 size={15} color={COLORS.error} />
+                    </TouchableOpacity>
                   </View>
                 </View>
 
-                <View style={styles.actionRow}>
-                  <TouchableOpacity onPress={() => handleOpenEdit(item)} style={styles.actionBtn}>
-                    <Edit2 size={15} color={COLORS.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDelete(item)} style={styles.actionBtn}>
-                    <Trash2 size={15} color={COLORS.error} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.cardFooter}>
-                <View style={styles.metricItem}>
-                  <Briefcase size={13} color={COLORS.textMuted} />
-                  <Text style={styles.metricLabel}>Applications:</Text>
-                  <Text style={styles.metricVal}>{item.totalApplications || 0}</Text>
-                </View>
-
-                {item.successRate !== undefined && (
+                <View style={styles.cardFooter}>
                   <View style={styles.metricItem}>
-                    <Text style={styles.metricLabel}>Success Rate:</Text>
-                    <Text style={[styles.metricVal, { color: COLORS.primary }]}>
-                      {item.successRate}%
-                    </Text>
+                    <Briefcase size={13} color={COLORS.textMuted} />
+                    <Text style={styles.metricLabel}>Applications:</Text>
+                    <Text style={styles.metricVal}>{item.totalApplications || 0}</Text>
                   </View>
-                )}
-              </View>
-            </View>
-          );
-        }}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Globe size={40} color={COLORS.textMuted} />
-            <Text style={styles.emptyTitle}>No Platforms Added</Text>
-            <Text style={styles.emptyDesc}>
-              Add job platforms like LinkedIn, Wellfound, Indeed, or Referral networks to track your application sources.
-            </Text>
-          </View>
-        }
-      />
 
-      {/* Edit / Add Platform Modal (Matching Web Exactly) */}
+                  {item.successRate !== undefined && (
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>Success Rate:</Text>
+                      <Text style={[styles.metricVal, { color: COLORS.primary }]}>
+                        {item.successRate}%
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            );
+          }}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Globe size={40} color={COLORS.textMuted} />
+              <Text style={styles.emptyTitle}>No Platforms Added</Text>
+              <Text style={styles.emptyDesc}>
+                Add job platforms like LinkedIn, Wellfound, Indeed, or Referral networks to track your application sources.
+              </Text>
+            </View>
+          }
+        />
+      )}
+
+      {/* Edit / Add Platform Modal */}
       <Modal
         visible={modalVisible}
         transparent
@@ -314,7 +330,6 @@ export default function PlatformsScreen() {
                 autoCapitalize="none"
               />
 
-              {/* COLOR THEME + HEX + PRESETS */}
               <Text style={styles.sectionLabel}>COLOR THEME</Text>
               <View style={styles.colorInputRow}>
                 <View style={[styles.colorPreviewBox, { backgroundColor: color }]} />
@@ -347,7 +362,6 @@ export default function PlatformsScreen() {
                 })}
               </View>
 
-              {/* DESCRIPTION (OPTIONAL) */}
               <Input
                 label="DESCRIPTION (OPTIONAL)"
                 placeholder="Keep quick notes about job boards, profiles, referral networks..."
@@ -358,7 +372,6 @@ export default function PlatformsScreen() {
                 style={{ height: 70, textAlignVertical: "top" }}
               />
 
-              {/* SET AS DEFAULT PLATFORM */}
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setIsDefault(!isDefault)}
@@ -378,7 +391,7 @@ export default function PlatformsScreen() {
                   style={{ flex: 1 }}
                 />
                 <Button
-                  title={editingPlatform ? "Save Platform" : "Save Platform"}
+                  title="Save Platform"
                   onPress={handleSubmit}
                   loading={formLoading}
                   style={{ flex: 1 }}
@@ -420,8 +433,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: RADIUS.full,
     gap: 4,
   },
@@ -429,6 +442,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: COLORS.onPrimary,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.md,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
   },
   listContent: {
     paddingHorizontal: SPACING.md,

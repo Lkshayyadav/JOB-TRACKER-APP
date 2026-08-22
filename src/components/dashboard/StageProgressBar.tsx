@@ -9,34 +9,36 @@ interface StageProgressBarProps {
 }
 
 export const StageProgressBar: React.FC<StageProgressBarProps> = ({ breakdown, total }) => {
-  const stages: ApplicationStatus[] = [
-    "Wishlist",
-    "Applied",
-    "OA",
-    "Technical Round",
-    "HR Round",
-    "Offer",
-    "Rejected",
+  const STAGE_CARDS: { label: string; stageKey: ApplicationStatus; color: string; bg: string }[] = [
+    { label: "Applied", stageKey: "Applied", color: "#0EA5E9", bg: "rgba(14, 165, 233, 0.15)" },
+    { label: "OA", stageKey: "OA", color: "#F59E0B", bg: "rgba(245, 158, 11, 0.15)" },
+    { label: "Technical", stageKey: "Technical Round", color: "#A855F7", bg: "rgba(168, 85, 247, 0.15)" },
+    { label: "HR Round", stageKey: "HR Round", color: "#6366F1", bg: "rgba(99, 102, 241, 0.15)" },
+    { label: "Offer", stageKey: "Offer", color: "#CCFF00", bg: "rgba(204, 255, 0, 0.18)" },
+    { label: "Rejected", stageKey: "Rejected", color: "#EF4444", bg: "rgba(239, 68, 68, 0.15)" },
   ];
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Pipeline Stage Distribution</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.header}>PIPELINE STATUS BREAKDOWN</Text>
+        <Text style={styles.totalBadge}>{total} Total</Text>
+      </View>
 
-      {/* Segmented Multi-Color Progress Bar */}
+      {/* Multi-Segment Visual Progress Bar */}
       <View style={styles.barContainer}>
         {total > 0 ? (
-          stages.map((stage) => {
-            const count = breakdown[stage] || 0;
+          STAGE_CARDS.map((item) => {
+            const count = breakdown[item.stageKey] || 0;
             if (count === 0) return null;
             const pct = (count / total) * 100;
             return (
               <View
-                key={stage}
+                key={item.stageKey}
                 style={{
                   width: `${pct}%`,
                   height: "100%",
-                  backgroundColor: COLORS.status[stage],
+                  backgroundColor: item.color,
                 }}
               />
             );
@@ -46,16 +48,16 @@ export const StageProgressBar: React.FC<StageProgressBarProps> = ({ breakdown, t
         )}
       </View>
 
-      {/* Stage Legend Pills */}
-      <View style={styles.legendGrid}>
-        {stages.map((stage) => {
-          const count = breakdown[stage] || 0;
+      {/* 2x3 Grid of Status Cards (Matching Web Dashboard) */}
+      <View style={styles.grid}>
+        {STAGE_CARDS.map((item) => {
+          const count = breakdown[item.stageKey] || 0;
           return (
-            <View key={stage} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: COLORS.status[stage] }]} />
-              <Text style={styles.legendText}>
-                {stage}: <Text style={styles.legendCount}>{count}</Text>
-              </Text>
+            <View key={item.stageKey} style={styles.gridCard}>
+              <Text style={styles.gridLabel}>{item.label}</Text>
+              <View style={[styles.gridCountBox, { backgroundColor: item.bg }]}>
+                <Text style={[styles.gridCountText, { color: item.color }]}>{count}</Text>
+              </View>
             </View>
           );
         })}
@@ -73,42 +75,59 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     marginTop: SPACING.md,
   },
-  header: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.text,
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: SPACING.sm,
   },
+  header: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+    letterSpacing: 0.5,
+  },
+  totalBadge: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
   barContainer: {
-    height: 10,
+    height: 8,
     flexDirection: "row",
     borderRadius: RADIUS.full,
     overflow: "hidden",
     backgroundColor: COLORS.surface,
     marginBottom: SPACING.md,
   },
-  legendGrid: {
+  grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: SPACING.sm,
+    gap: 8,
   },
-  legendItem: {
-    flexDirection: "row",
+  gridCard: {
+    width: "31%",
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    paddingVertical: 10,
     alignItems: "center",
-    gap: 4,
-    minWidth: "45%",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  legendText: {
+  gridLabel: {
     fontSize: 11,
-    color: COLORS.textSecondary,
-  },
-  legendCount: {
     fontWeight: "600",
-    color: COLORS.text,
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  gridCountBox: {
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: RADIUS.full,
+  },
+  gridCountText: {
+    fontSize: 14,
+    fontWeight: "800",
   },
 });

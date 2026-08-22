@@ -22,13 +22,12 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Handle Token Expiration
+// Response Interceptor: Handle Token Expiration Gracefully
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Token is expired or unauthorized
-      console.warn("API 401 Unauthorized - clearing credentials");
+      // Gracefully clear credentials without throwing disruptive warning dialogs
       await Storage.clearAuth();
     }
     return Promise.reject(error);

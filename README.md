@@ -53,15 +53,7 @@ npm run start
 
 ---
 
-## 📚 Phase Documentation
-* [Phase 1: Electric Lime & OLED Dark Theme](file:///home/lakshay-yadav/JOB-TRACKER-APP/Phases/PHASE_1.md)
-* [Phase 2: TypeScript Data Contracts & Axios](file:///home/lakshay-yadav/JOB-TRACKER-APP/Phases/PHASE_2.md)
-* [Phase 3: Authentication & Session Gate](file:///home/lakshay-yadav/JOB-TRACKER-APP/Phases/PHASE_3.md)
-* [Phase 4: Executive Dashboard & Metrics](file:///home/lakshay-yadav/JOB-TRACKER-APP/Phases/PHASE_4.md)
-* [Phase 5: Applications Pipeline & Stage Switcher](file:///home/lakshay-yadav/JOB-TRACKER-APP/Phases/PHASE_5.md)
-* [Phase 6: Application Details & Modal Editors](file:///home/lakshay-yadav/JOB-TRACKER-APP/Phases/PHASE_6.md)
-* [Phase 7: Interview & Follow-up Timeline](file:///home/lakshay-yadav/JOB-TRACKER-APP/Phases/PHASE_7.md)
-* [Phase 8: Saved Jobs & 1-Tap Convert](file:///home/lakshay-yadav/JOB-TRACKER-APP/Phases/PHASE_8.md)
-* [Phase 9: Platform Conversion Analytics](file:///home/lakshay-yadav/JOB-TRACKER-APP/Phases/PHASE_9.md)
-* [Phase 10: Production Hardening & Deployment](file:///home/lakshay-yadav/JOB-TRACKER-APP/Phases/PHASE_10.md)
-* [Senior Mobile Interview Defense Guide](file:///home/lakshay-yadav/JOB-TRACKER-APP/Phases/INTERVIEW_PREP.md)
+---
+
+## 📄 License
+MIT License. Created by [Lakshay Yadav](https://github.com/Lkshayyadav).

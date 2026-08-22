@@ -5,7 +5,7 @@ export const APP_CONFIG = {
   apiBaseUrl: "https://job-tracker-icbp.onrender.com/api",
   // Local fallback backend URL
   localApiBaseUrl: "http://localhost:5000/api",
-  timeoutMs: 15000,
+  timeoutMs: 45000,
   storageKeys: {
     accessToken: "jobtrack_access_token",
     refreshToken: "jobtrack_refresh_token",

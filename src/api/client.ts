@@ -22,12 +22,19 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Handle Token Expiration Gracefully
+// Response Interceptor: Handle Token Expiration Gracefully & Auto-Retry Cold Starts
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const config = error.config;
+    if (config && !config._retry && (error.code === "ECONNABORTED" || !error.response)) {
+      config._retry = true;
+      config.timeout = 50000;
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      return apiClient(config);
+    }
+
     if (error.response?.status === 401) {
-      // Gracefully clear credentials without throwing disruptive warning dialogs
       await Storage.clearAuth();
     }
     return Promise.reject(error);

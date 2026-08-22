@@ -129,7 +129,7 @@ export default function FollowUpsScreen() {
         </Text>
       </View>
 
-      {initialLoading ? (
+      {initialLoading && applications.length === 0 ? (
         <SyncingLoader
           title="Syncing Follow-up Schedules..."
           subtitle="Calculating upcoming interview deadlines..."

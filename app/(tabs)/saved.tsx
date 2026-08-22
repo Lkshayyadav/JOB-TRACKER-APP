@@ -59,7 +59,7 @@ export default function SavedJobsScreen() {
         </View>
       </View>
 
-      {initialLoading ? (
+      {initialLoading && savedJobs.length === 0 ? (
         <SyncingLoader
           title="Syncing Saved Bookmarks..."
           subtitle="Loading saved job postings..."

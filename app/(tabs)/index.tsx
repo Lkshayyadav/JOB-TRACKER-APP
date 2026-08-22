@@ -58,7 +58,7 @@ export default function DashboardScreen() {
     }, [loadData])
   );
 
-  if (initialLoading) {
+  if (initialLoading && applications.length === 0 && !stats) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <SyncingLoader
@@ -128,7 +128,7 @@ export default function DashboardScreen() {
             style={styles.addBtn}
           >
             <Plus size={16} color={COLORS.onPrimary} />
-            <Text style={styles.addBtnText}>+ Add Application</Text>
+            <Text style={styles.addBtnText}>+ Add</Text>
           </TouchableOpacity>
         </View>
 

@@ -184,11 +184,11 @@ export default function PlatformsScreen() {
           style={styles.addBtn}
         >
           <Plus size={16} color={COLORS.onPrimary} />
-          <Text style={styles.addBtnText}>+ Add Platform</Text>
+          <Text style={styles.addBtnText}>+ Add</Text>
         </TouchableOpacity>
       </View>
 
-      {loading ? (
+      {loading && platforms.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={COLORS.primary} size="large" />
           <Text style={styles.loadingText}>Syncing Platform Sources...</Text>

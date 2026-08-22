@@ -175,7 +175,7 @@ export default function ApplicationsScreen() {
             style={styles.addBtn}
           >
             <Plus size={16} color={COLORS.onPrimary} />
-            <Text style={styles.addBtnText}>+ Add Application</Text>
+            <Text style={styles.addBtnText}>+ Add</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -296,7 +296,7 @@ export default function ApplicationsScreen() {
       </View>
 
       {/* Applications Table / Cards List */}
-      {initialLoading ? (
+      {initialLoading && applications.length === 0 ? (
         <SyncingLoader
           title="Syncing Application Pipeline..."
           subtitle="Connecting to database server & assembling your pipeline stages..."

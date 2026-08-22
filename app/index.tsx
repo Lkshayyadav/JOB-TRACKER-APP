@@ -14,7 +14,7 @@ export default function SplashScreen() {
       if (token) {
         router.replace("/(tabs)");
       } else {
-        router.replace("/(auth)/login");
+        router.replace("/(auth)/welcome");
       }
     }
   }, [isInitialized, token]);

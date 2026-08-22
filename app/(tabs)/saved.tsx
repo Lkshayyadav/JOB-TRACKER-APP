@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Bookmark, ExternalLink, ArrowRight, Trash2, Plus } from "lucide-react-native";
+import { useFocusEffect } from "expo-router";
+import { SyncingLoader } from "../../src/components/common/SyncingLoader";
 import { useSavedJobStore } from "../../src/store/savedJobStore";
 import { useApplicationStore } from "../../src/store/applicationStore";
 import { SavedJob } from "../../src/types";
@@ -18,11 +20,22 @@ import { COLORS, SPACING, RADIUS } from "../../src/constants/theme";
 
 export default function SavedJobsScreen() {
   const { savedJobs, isLoading, fetchSavedJobs, deleteSavedJob, applySavedJob } = useSavedJobStore();
+  const [initialLoading, setInitialLoading] = useState(true);
   const { fetchApplications } = useApplicationStore();
 
-  useEffect(() => {
-    fetchSavedJobs();
-  }, []);
+  const loadData = React.useCallback(async () => {
+    try {
+      await fetchSavedJobs();
+    } finally {
+      setInitialLoading(false);
+    }
+  }, [fetchSavedJobs]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const handleApply = async (job: SavedJob) => {
     const success = await applySavedJob(job._id);
@@ -46,6 +59,12 @@ export default function SavedJobsScreen() {
         </View>
       </View>
 
+      {initialLoading ? (
+        <SyncingLoader
+          title="Syncing Saved Bookmarks..."
+          subtitle="Loading saved job postings..."
+        />
+      ) : (
       <FlatList
         data={savedJobs}
         keyExtractor={(item) => item._id}
@@ -127,7 +146,7 @@ export default function SavedJobsScreen() {
           </View>
         }
       />
-    </SafeAreaView>
+    )}</SafeAreaView>
   );
 }
 

@@ -11,7 +11,8 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
+import { SyncingLoader } from "../../src/components/common/SyncingLoader";
 import {
   Search,
   Plus,
@@ -71,11 +72,24 @@ export default function ApplicationsScreen() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedAppForStatus, setSelectedAppForStatus] = useState<Application | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  useEffect(() => {
-    fetchApplications();
-    PlatformAPI.getPlatforms().then(setPlatforms).catch(() => {});
-  }, []);
+  const loadData = React.useCallback(async () => {
+    try {
+      await Promise.all([
+        fetchApplications(),
+        PlatformAPI.getPlatforms().then(setPlatforms).catch(() => {}),
+      ]);
+    } finally {
+      setInitialLoading(false);
+    }
+  }, [fetchApplications]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   // Filter & Sort Applications
   const filteredApps = useMemo(() => {
@@ -282,6 +296,12 @@ export default function ApplicationsScreen() {
       </View>
 
       {/* Applications Table / Cards List */}
+      {initialLoading ? (
+        <SyncingLoader
+          title="Syncing Application Pipeline..."
+          subtitle="Connecting to database server & assembling your pipeline stages..."
+        />
+      ) : (
       <FlatList
         data={filteredApps}
         keyExtractor={(item) => item._id}
@@ -399,6 +419,8 @@ export default function ApplicationsScreen() {
           </View>
         }
       />
+
+      )}
 
       {/* 1-Tap Fast Status Modal */}
       {selectedAppForStatus && (

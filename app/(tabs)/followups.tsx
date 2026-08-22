@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
+import { SyncingLoader } from "../../src/components/common/SyncingLoader";
 import { Clock, Calendar, AlertCircle, CheckCircle2, ChevronRight } from "lucide-react-native";
 import { useApplicationStore } from "../../src/store/applicationStore";
 import { Application } from "../../src/types";
@@ -19,10 +20,21 @@ import { COLORS, SPACING, RADIUS } from "../../src/constants/theme";
 export default function FollowUpsScreen() {
   const router = useRouter();
   const { applications, isLoading, fetchApplications } = useApplicationStore();
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  useEffect(() => {
-    fetchApplications();
-  }, []);
+  const loadData = useCallback(async () => {
+    try {
+      await fetchApplications();
+    } finally {
+      setInitialLoading(false);
+    }
+  }, [fetchApplications]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   // Filter apps that have followUpDate or are in interview stages
   const followUpApps = applications.filter(
@@ -117,6 +129,12 @@ export default function FollowUpsScreen() {
         </Text>
       </View>
 
+      {initialLoading ? (
+        <SyncingLoader
+          title="Syncing Follow-up Schedules..."
+          subtitle="Calculating upcoming interview deadlines..."
+        />
+      ) : (
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -159,7 +177,7 @@ export default function FollowUpsScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    )}</SafeAreaView>
   );
 }
 

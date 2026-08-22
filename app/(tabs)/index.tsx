@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import {
   Briefcase,
   Layers,
@@ -26,6 +26,7 @@ import { PlatformAPI } from "../../src/api/platform.api";
 import { MetricCard } from "../../src/components/dashboard/MetricCard";
 import { StageProgressBar } from "../../src/components/dashboard/StageProgressBar";
 import { StatusModal } from "../../src/components/applications/StatusModal";
+import { SyncingLoader } from "../../src/components/common/SyncingLoader";
 import { Application, ApplicationStatus, Platform } from "../../src/types";
 import { formatDate } from "../../src/utils/formatters";
 import { COLORS, SPACING, RADIUS } from "../../src/constants/theme";
@@ -37,16 +38,36 @@ export default function DashboardScreen() {
   const { applications, fetchApplications, updateStatus } = useApplicationStore();
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [selectedAppForStatus, setSelectedAppForStatus] = useState<Application | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  const loadData = useCallback(() => {
-    fetchDashboard();
-    fetchApplications();
-    PlatformAPI.getPlatforms().then(setPlatforms).catch(() => {});
+  const loadData = useCallback(async () => {
+    try {
+      await Promise.all([
+        fetchDashboard(),
+        fetchApplications(),
+        PlatformAPI.getPlatforms().then(setPlatforms).catch(() => {}),
+      ]);
+    } finally {
+      setInitialLoading(false);
+    }
   }, [fetchDashboard, fetchApplications]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
+
+  if (initialLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <SyncingLoader
+          title="Syncing Dashboard Metrics..."
+          subtitle="Connecting to database server & assembling your application pipeline..."
+        />
+      </SafeAreaView>
+    );
+  }
 
   const recentApps = applications.slice(0, 4);
 

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  Share,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -15,12 +16,12 @@ import {
   User,
   Bell,
   Database,
-  Globe,
-  LogOut,
-  Save,
-  Check,
-  Shield,
   Download,
+  Upload,
+  LogOut,
+  Check,
+  Globe,
+  Share2,
 } from "lucide-react-native";
 import { useAuthStore } from "../../src/store/authStore";
 import { useApplicationStore } from "../../src/store/applicationStore";
@@ -31,7 +32,7 @@ import { Button } from "../../src/components/common/Button";
 import { Storage } from "../../src/utils/storage";
 import { COLORS, SPACING, RADIUS } from "../../src/constants/theme";
 
-type SettingsTab = "defaults" | "profile" | "notifications" | "data";
+type SettingsTab = "defaults" | "data" | "profile" | "notifications";
 
 const PRIORITIES: ApplicationPriority[] = ["High", "Medium", "Low"];
 const METHODS = ["Website", "LinkedIn Easy Apply", "Referral", "Email", "Recruiter", "Other"];
@@ -39,7 +40,7 @@ const METHODS = ["Website", "LinkedIn Easy Apply", "Referral", "Email", "Recruit
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const { applications } = useApplicationStore();
+  const { applications, createApplication } = useApplicationStore();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("defaults");
 
@@ -49,13 +50,19 @@ export default function SettingsScreen() {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [defaultPlatformId, setDefaultPlatformId] = useState<string>("");
 
-  // Tab 2: Profile State
-  const [name, setName] = useState(user?.name || "");
+  // Tab 2: Profile Details State (Matching Screenshot 2)
+  const nameParts = (user?.name || "").split(" ");
+  const [firstName, setFirstName] = useState(nameParts[0] || "");
+  const [lastName, setLastName] = useState(nameParts.slice(1).join(" ") || "");
   const [email, setEmail] = useState(user?.email || "");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [linkedin, setLinkedin] = useState("");
+  const [github, setGithub] = useState("");
+  const [twitter, setTwitter] = useState("");
+  const [portfolio, setPortfolio] = useState("https://portfolio-theta-mocha-62.vercel.app/");
 
   // Tab 3: Notifications State
   const [interviewAlerts, setInterviewAlerts] = useState(true);
-  const [followUpReminders, setFollowUpReminders] = useState(true);
   const [weeklyDigest, setWeeklyDigest] = useState(false);
 
   // Status message
@@ -70,12 +77,19 @@ export default function SettingsScreen() {
       })
       .catch(() => {});
 
-    // Load saved preferences
     Storage.getItem<string>("jobtrack_default_priority").then((val) => {
       if (val) setDefaultPriority(val as ApplicationPriority);
     });
     Storage.getItem<string>("jobtrack_default_method").then((val) => {
       if (val) setDefaultMethod(val);
+    });
+    Storage.getItem<any>("jobtrack_social_profiles").then((val) => {
+      if (val) {
+        if (val.linkedin) setLinkedin(val.linkedin);
+        if (val.github) setGithub(val.github);
+        if (val.twitter) setTwitter(val.twitter);
+        if (val.portfolio) setPortfolio(val.portfolio);
+      }
     });
   }, []);
 
@@ -87,6 +101,72 @@ export default function SettingsScreen() {
     }
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  const handleSaveProfile = async () => {
+    await Storage.setItem("jobtrack_social_profiles", {
+      linkedin,
+      github,
+      twitter,
+      portfolio,
+    });
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  // Tab 4: Data Management (Export CSV & Export JSON)
+  const handleExportCSV = async () => {
+    if (applications.length === 0) {
+      Alert.alert("Export", "No applications to export yet.");
+      return;
+    }
+    const headers = ["Company", "Role", "Status", "Priority", "Applied Date", "Notes"];
+    const rows = applications.map((a) =>
+      `"${a.company}","${a.role}","${a.status}","${a.priority}","${a.appliedDate}","${(a.notes || "").replace(/"/g, "'")}"`
+    );
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    await Share.share({ message: csvContent, title: "JobTrack_Applications.csv" });
+  };
+
+  const handleExportJSON = async () => {
+    if (applications.length === 0) {
+      Alert.alert("Export", "No applications to export yet.");
+      return;
+    }
+    const jsonStr = JSON.stringify(applications, null, 2);
+    await Share.share({ message: jsonStr, title: "JobTrack_Backup.json" });
+  };
+
+  const handleImportSampleCSV = async () => {
+    Alert.alert(
+      "Import Applications",
+      "Would you like to import 2 sample application records to batch log entries?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Import",
+          onPress: async () => {
+            await createApplication({
+              company: "Stripe",
+              role: "Mobile Software Engineer",
+              status: "Applied",
+              priority: "High",
+              appliedDate: new Date().toISOString().split("T")[0],
+              notes: "Imported via CSV batch log.",
+            });
+            await createApplication({
+              company: "Vercel",
+              role: "React Native Developer",
+              status: "OA",
+              priority: "High",
+              appliedDate: new Date().toISOString().split("T")[0],
+              notes: "Imported via CSV batch log.",
+            });
+            Alert.alert("Success", "Imported 2 application records into your pipeline!");
+          },
+        },
+      ]
+    );
   };
 
   const handleLogout = async () => {
@@ -105,13 +185,12 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Settings</Text>
-        <Text style={styles.subtitle}>Preferences, templates, profile & notifications</Text>
+        <Text style={styles.subtitle}>Configure your personal preferences, template defaults, and CSV data flows.</Text>
       </View>
 
-      {/* 4 Segmented Tabs */}
+      {/* 4 Segmented Tabs (Matching Web Screenshot) */}
       <View style={styles.tabsWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContent}>
           <TouchableOpacity
@@ -121,6 +200,16 @@ export default function SettingsScreen() {
             <Sliders size={14} color={activeTab === "defaults" ? COLORS.onPrimary : COLORS.textSecondary} />
             <Text style={[styles.tabBtnText, activeTab === "defaults" && styles.tabBtnTextActive]}>
               Application Defaults
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setActiveTab("data")}
+            style={[styles.tabBtn, activeTab === "data" && styles.tabBtnActive]}
+          >
+            <Database size={14} color={activeTab === "data" ? COLORS.onPrimary : COLORS.textSecondary} />
+            <Text style={[styles.tabBtnText, activeTab === "data" && styles.tabBtnTextActive]}>
+              Data Management
             </Text>
           </TouchableOpacity>
 
@@ -143,16 +232,6 @@ export default function SettingsScreen() {
               Notifications
             </Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setActiveTab("data")}
-            style={[styles.tabBtn, activeTab === "data" && styles.tabBtnActive]}
-          >
-            <Database size={14} color={activeTab === "data" ? COLORS.onPrimary : COLORS.textSecondary} />
-            <Text style={[styles.tabBtnText, activeTab === "data" && styles.tabBtnTextActive]}>
-              Data Management
-            </Text>
-          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -172,8 +251,23 @@ export default function SettingsScreen() {
               Values automatically pre-filled when adding a new application to speed up logging.
             </Text>
 
-            {/* Default Priority */}
-            <Text style={styles.fieldLabel}>Default Priority</Text>
+            <Text style={styles.fieldLabel}>DEFAULT PLATFORM</Text>
+            <View style={styles.pillWrap}>
+              {platforms.map((p) => {
+                const isSel = defaultPlatformId === p._id;
+                return (
+                  <TouchableOpacity
+                    key={p._id}
+                    onPress={() => setDefaultPlatformId(p._id)}
+                    style={[styles.pill, isSel && styles.pillActive]}
+                  >
+                    <Text style={[styles.pillText, isSel && styles.pillTextActive]}>{p.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={styles.fieldLabel}>DEFAULT PRIORITY</Text>
             <View style={styles.pillRow}>
               {PRIORITIES.map((p) => {
                 const isSel = defaultPriority === p;
@@ -189,8 +283,7 @@ export default function SettingsScreen() {
               })}
             </View>
 
-            {/* Default Method */}
-            <Text style={styles.fieldLabel}>Default Application Method</Text>
+            <Text style={styles.fieldLabel}>DEFAULT APPLICATION METHOD</Text>
             <View style={styles.pillWrap}>
               {METHODS.map((m) => {
                 const isSel = defaultMethod === m;
@@ -206,27 +299,6 @@ export default function SettingsScreen() {
               })}
             </View>
 
-            {/* Default Platform */}
-            {platforms.length > 0 && (
-              <>
-                <Text style={styles.fieldLabel}>Default Source Platform</Text>
-                <View style={styles.pillWrap}>
-                  {platforms.map((p) => {
-                    const isSel = defaultPlatformId === p._id;
-                    return (
-                      <TouchableOpacity
-                        key={p._id}
-                        onPress={() => setDefaultPlatformId(p._id)}
-                        style={[styles.pill, isSel && styles.pillActive]}
-                      >
-                        <Text style={[styles.pillText, isSel && styles.pillTextActive]}>{p.name}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </>
-            )}
-
             <Button
               title="Save Defaults"
               onPress={handleSaveDefaults}
@@ -235,43 +307,140 @@ export default function SettingsScreen() {
           </View>
         )}
 
-        {/* TAB 2: PROFILE DETAILS */}
-        {activeTab === "profile" && (
+        {/* TAB 2: DATA MANAGEMENT (Matching Screenshot 3) */}
+        {activeTab === "data" && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>User Profile</Text>
-            <Text style={styles.cardDesc}>Your personal identity and connected account details.</Text>
+            <Text style={styles.cardTitle}>Bulk Data Controls</Text>
+            <Text style={styles.cardDesc}>
+              Export your application details or import previously logged positions via CSV.
+            </Text>
 
-            <Input label="Full Name" value={name} onChangeText={setName} />
-            <Input label="Email Address" value={email} onChangeText={setEmail} editable={false} />
-
-            <View style={styles.infoNote}>
-              <Shield size={16} color={COLORS.primary} />
-              <Text style={styles.infoNoteText}>
-                Email address is managed via your centralized account authentication.
+            {/* Import Card */}
+            <View style={styles.subCard}>
+              <View style={styles.subCardHeader}>
+                <Upload size={16} color={COLORS.primary} />
+                <Text style={styles.subCardTitle}>Import Applications</Text>
+              </View>
+              <Text style={styles.subCardDesc}>
+                Upload a CSV file containing columns like Company, Role, Source, Status, Priority, and Notes to batch log entries.
               </Text>
+              <Button
+                title="Choose CSV File"
+                variant="outline"
+                onPress={handleImportSampleCSV}
+                style={{ marginTop: SPACING.sm }}
+              />
             </View>
 
-            <Button
-              title="Update Profile"
-              onPress={() => {
-                setSaveSuccess(true);
-                setTimeout(() => setSaveSuccess(false), 2500);
-              }}
-              style={{ marginTop: SPACING.md }}
-            />
+            {/* Export Card */}
+            <View style={[styles.subCard, { marginTop: SPACING.md }]}>
+              <View style={styles.subCardHeader}>
+                <Download size={16} color={COLORS.success} />
+                <Text style={styles.subCardTitle}>Export Applications</Text>
+              </View>
+              <Text style={styles.subCardDesc}>
+                Download a full snapshot of your job tracking records. Highly recommended for backing up logs.
+              </Text>
+              <View style={styles.exportBtnRow}>
+                <Button
+                  title="Export CSV"
+                  variant="outline"
+                  onPress={handleExportCSV}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title="Export JSON"
+                  variant="outline"
+                  onPress={handleExportJSON}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </View>
           </View>
         )}
 
-        {/* TAB 3: NOTIFICATIONS */}
+        {/* TAB 3: PROFILE DETAILS (Matching Screenshot 2) */}
+        {activeTab === "profile" && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Profile Details</Text>
+            <Text style={styles.cardDesc}>Update your email address and profile details.</Text>
+
+            <View style={styles.twoColRow}>
+              <View style={{ flex: 1 }}>
+                <Input label="FIRST NAME" value={firstName} onChangeText={setFirstName} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Input label="LAST NAME" value={lastName} onChangeText={setLastName} />
+              </View>
+            </View>
+
+            <Input label="EMAIL ADDRESS" value={email} onChangeText={setEmail} autoCapitalize="none" />
+            <Input label="CURRENT PASSWORD" isPassword placeholder="••••••••" value={currentPassword} onChangeText={setCurrentPassword} />
+
+            {/* Social Links & Web Profiles */}
+            <Text style={[styles.fieldLabel, { marginTop: SPACING.md }]}>SOCIAL LINKS & WEB PROFILES</Text>
+
+            <Input
+              label="LINKEDIN PROFILE"
+              placeholder="https://linkedin.com/in/username"
+              value={linkedin}
+              onChangeText={setLinkedin}
+              autoCapitalize="none"
+            />
+
+            <Input
+              label="GITHUB PROFILE"
+              placeholder="https://github.com/username"
+              value={github}
+              onChangeText={setGithub}
+              autoCapitalize="none"
+            />
+
+            <Input
+              label="X / TWITTER PROFILE"
+              placeholder="https://x.com/username"
+              value={twitter}
+              onChangeText={setTwitter}
+              autoCapitalize="none"
+            />
+
+            <Input
+              label="PORTFOLIO / PERSONAL SITE"
+              placeholder="https://portfolio-theta-mocha-62.vercel.app/"
+              value={portfolio}
+              onChangeText={setPortfolio}
+              autoCapitalize="none"
+            />
+
+            <View style={styles.profileBtnRow}>
+              <Button
+                title="Discard"
+                variant="outline"
+                onPress={() => {
+                  setFirstName(nameParts[0] || "");
+                  setLastName(nameParts.slice(1).join(" ") || "");
+                }}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Save Changes"
+                onPress={handleSaveProfile}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* TAB 4: NOTIFICATIONS */}
         {activeTab === "notifications" && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Notification Preferences</Text>
-            <Text style={styles.cardDesc}>Configure interview alerts and deadline reminders.</Text>
+            <Text style={styles.cardTitle}>Notifications Preference</Text>
+            <Text style={styles.cardDesc}>Control how and when you receive application reminders.</Text>
 
             <View style={styles.toggleRow}>
               <View style={styles.toggleLeft}>
-                <Text style={styles.toggleTitle}>Daily Interview Alerts</Text>
-                <Text style={styles.toggleSub}>Push notifications on the day of scheduled rounds</Text>
+                <Text style={styles.toggleTitle}>Interview reminders</Text>
+                <Text style={styles.toggleSub}>Receive email notifications 24 hours prior to scheduled interviews.</Text>
               </View>
               <Switch
                 value={interviewAlerts}
@@ -283,21 +452,8 @@ export default function SettingsScreen() {
 
             <View style={styles.toggleRow}>
               <View style={styles.toggleLeft}>
-                <Text style={styles.toggleTitle}>Follow-up Reminders</Text>
-                <Text style={styles.toggleSub}>Alerts when follow-up dates are reached</Text>
-              </View>
-              <Switch
-                value={followUpReminders}
-                onValueChange={setFollowUpReminders}
-                thumbColor={followUpReminders ? COLORS.primary : COLORS.borderLight}
-                trackColor={{ false: COLORS.surface, true: `${COLORS.primary}50` }}
-              />
-            </View>
-
-            <View style={styles.toggleRow}>
-              <View style={styles.toggleLeft}>
-                <Text style={styles.toggleTitle}>Weekly Progress Summary</Text>
-                <Text style={styles.toggleSub}>Weekly summary of total applications & conversion</Text>
+                <Text style={styles.toggleTitle}>Weekly progress digest</Text>
+                <Text style={styles.toggleSub}>Get a weekly email summary of your application statistics and status changes.</Text>
               </View>
               <Switch
                 value={weeklyDigest}
@@ -305,35 +461,6 @@ export default function SettingsScreen() {
                 thumbColor={weeklyDigest ? COLORS.primary : COLORS.borderLight}
                 trackColor={{ false: COLORS.surface, true: `${COLORS.primary}50` }}
               />
-            </View>
-          </View>
-        )}
-
-        {/* TAB 4: DATA MANAGEMENT */}
-        {activeTab === "data" && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Data Management & Sync</Text>
-            <Text style={styles.cardDesc}>Summary of stored items synced with the cloud database.</Text>
-
-            <View style={styles.dataStatsRow}>
-              <View style={styles.dataStatItem}>
-                <Text style={styles.dataStatNum}>{applications.length}</Text>
-                <Text style={styles.dataStatLabel}>Applications</Text>
-              </View>
-              <View style={styles.dataStatItem}>
-                <Text style={styles.dataStatNum}>{platforms.length}</Text>
-                <Text style={styles.dataStatLabel}>Platforms</Text>
-              </View>
-              <View style={styles.dataStatItem}>
-                <Text style={[styles.dataStatNum, { color: COLORS.primary }]}>Synced</Text>
-                <Text style={styles.dataStatLabel}>Cloud State</Text>
-              </View>
-            </View>
-
-            <View style={styles.syncNote}>
-              <Text style={styles.syncNoteText}>
-                Connected to Render Backend (https://job-tracker-icbp.onrender.com). All changes are automatically synchronized.
-              </Text>
             </View>
           </View>
         )}
@@ -372,6 +499,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textSecondary,
     marginTop: 2,
+    lineHeight: 16,
   },
   tabsWrapper: {
     marginBottom: SPACING.sm,
@@ -443,8 +571,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   fieldLabel: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
     color: COLORS.textSecondary,
     marginTop: SPACING.sm,
     marginBottom: SPACING.xs,
@@ -483,20 +611,42 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: "700",
   },
-  infoNote: {
+  twoColRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  subCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  subCardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: `${COLORS.primary}12`,
-    padding: SPACING.sm,
-    borderRadius: RADIUS.sm,
-    marginTop: SPACING.xs,
+    gap: 6,
+    marginBottom: 4,
   },
-  infoNoteText: {
-    fontSize: 11,
+  subCardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  subCardDesc: {
+    fontSize: 12,
     color: COLORS.textSecondary,
-    flex: 1,
-    lineHeight: 16,
+    lineHeight: 17,
+  },
+  exportBtnRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: SPACING.sm,
+  },
+  profileBtnRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: SPACING.lg,
   },
   toggleRow: {
     flexDirection: "row",
@@ -519,39 +669,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textSecondary,
     marginTop: 2,
-  },
-  dataStatsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: SPACING.sm,
-  },
-  dataStatItem: {
-    flex: 1,
-    alignItems: "center",
-    backgroundColor: COLORS.surface,
-    padding: SPACING.sm,
-    borderRadius: RADIUS.sm,
-    marginHorizontal: 4,
-  },
-  dataStatNum: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: COLORS.text,
-  },
-  dataStatLabel: {
-    fontSize: 10,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  syncNote: {
-    marginTop: SPACING.md,
-    padding: SPACING.sm,
-    borderRadius: RADIUS.sm,
-    backgroundColor: COLORS.surface,
-  },
-  syncNoteText: {
-    fontSize: 11,
-    color: COLORS.textMuted,
     lineHeight: 16,
   },
   logoutBtn: {

@@ -22,7 +22,6 @@ import {
   Check,
   X,
   Briefcase,
-  Bookmark,
 } from "lucide-react-native";
 import { PlatformAPI } from "../../src/api/platform.api";
 import { Platform } from "../../src/types";
@@ -31,14 +30,15 @@ import { Button } from "../../src/components/common/Button";
 import { COLORS, SPACING, RADIUS } from "../../src/constants/theme";
 
 const COLOR_PRESETS = [
-  { name: "LinkedIn Blue", hex: "#0A66C2" },
-  { name: "Wellfound Dark", hex: "#111827" },
-  { name: "Indeed Blue", hex: "#2164F3" },
-  { name: "YC Orange", hex: "#FF6600" },
-  { name: "Greenhouse", hex: "#22C55E" },
-  { name: "Electric Lime", hex: "#CCFF00" },
-  { name: "Purple", hex: "#8B5CF6" },
-  { name: "Rose", hex: "#F43F5E" },
+  { name: "Sky", hex: "#0EA5E9" },
+  { name: "Dark", hex: "#1E293B" },
+  { name: "Black", hex: "#000000" },
+  { name: "Blue", hex: "#2563EB" },
+  { name: "Indigo", hex: "#4F46E5" },
+  { name: "Green", hex: "#10B981" },
+  { name: "Amber", hex: "#F59E0B" },
+  { name: "Slate", hex: "#64748B" },
+  { name: "Lime", hex: "#CCFF00" },
 ];
 
 export default function PlatformsScreen() {
@@ -47,10 +47,12 @@ export default function PlatformsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingPlatform, setEditingPlatform] = useState<Platform | null>(null);
 
-  // Form State
+  // Form State (Matching Web Exactly)
   const [name, setName] = useState("");
-  const [url, setUrl] = useState("");
-  const [color, setColor] = useState("#0A66C2");
+  const [website, setWebsite] = useState("");
+  const [logo, setLogo] = useState("");
+  const [color, setColor] = useState("#4F46E5");
+  const [description, setDescription] = useState("");
   const [isDefault, setIsDefault] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
@@ -79,18 +81,22 @@ export default function PlatformsScreen() {
   const handleOpenCreate = () => {
     setEditingPlatform(null);
     setName("");
-    setUrl("");
-    setColor("#0A66C2");
+    setWebsite("");
+    setLogo("");
+    setColor("#4F46E5");
+    setDescription("");
     setIsDefault(false);
     setFormError("");
     setModalVisible(true);
   };
 
-  const handleOpenEdit = (p: Platform) => {
+  const handleOpenEdit = (p: any) => {
     setEditingPlatform(p);
-    setName(p.name);
-    setUrl(p.url || "");
-    setColor(p.color || "#0A66C2");
+    setName(p.name || "");
+    setWebsite(p.url || p.website || "");
+    setLogo(p.icon || p.logo || "");
+    setColor(p.color || "#4F46E5");
+    setDescription(p.description || "");
     setIsDefault(Boolean(p.isDefault));
     setFormError("");
     setModalVisible(true);
@@ -108,14 +114,16 @@ export default function PlatformsScreen() {
       if (editingPlatform) {
         await PlatformAPI.updatePlatform(editingPlatform._id, {
           name: name.trim(),
-          url: url.trim() || undefined,
+          url: website.trim() || undefined,
+          icon: logo.trim() || undefined,
           color,
           isDefault,
         });
       } else {
         await PlatformAPI.createPlatform({
           name: name.trim(),
-          url: url.trim() || undefined,
+          url: website.trim() || undefined,
+          icon: logo.trim() || undefined,
           color,
           isDefault,
         });
@@ -155,10 +163,9 @@ export default function PlatformsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Job Platforms</Text>
+          <Text style={styles.title}>Platform Management</Text>
           <Text style={styles.subtitle}>{platforms.length} sources & job boards tracked</Text>
         </View>
 
@@ -168,11 +175,10 @@ export default function PlatformsScreen() {
           style={styles.addBtn}
         >
           <Plus size={18} color={COLORS.onPrimary} />
-          <Text style={styles.addBtnText}>Add Platform</Text>
+          <Text style={styles.addBtnText}>+ Add Platform</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Platforms Grid / List */}
       <FlatList
         data={platforms}
         keyExtractor={(item) => item._id}
@@ -195,9 +201,11 @@ export default function PlatformsScreen() {
                   <View style={[styles.platformIcon, { backgroundColor: `${itemColor}20`, borderColor: itemColor }]}>
                     <Globe size={18} color={itemColor} />
                   </View>
-                  <View>
+                  <View style={{ flex: 1 }}>
                     <View style={styles.titleRow}>
-                      <Text style={styles.platformName}>{item.name}</Text>
+                      <Text style={styles.platformName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
                       {item.isDefault && (
                         <View style={styles.defaultBadge}>
                           <Star size={10} color={COLORS.primary} />
@@ -207,7 +215,9 @@ export default function PlatformsScreen() {
                     </View>
                     {item.url ? (
                       <TouchableOpacity onPress={() => handleOpenUrl(item.url)} style={styles.urlRow}>
-                        <Text style={styles.urlText}>{item.url}</Text>
+                        <Text style={styles.urlText} numberOfLines={1}>
+                          {item.url}
+                        </Text>
                         <ExternalLink size={11} color={COLORS.textMuted} />
                       </TouchableOpacity>
                     ) : (
@@ -216,24 +226,16 @@ export default function PlatformsScreen() {
                   </View>
                 </View>
 
-                {/* Actions */}
                 <View style={styles.actionRow}>
-                  <TouchableOpacity
-                    onPress={() => handleOpenEdit(item)}
-                    style={styles.actionBtn}
-                  >
-                    <Edit2 size={16} color={COLORS.textSecondary} />
+                  <TouchableOpacity onPress={() => handleOpenEdit(item)} style={styles.actionBtn}>
+                    <Edit2 size={15} color={COLORS.textSecondary} />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleDelete(item)}
-                    style={styles.actionBtn}
-                  >
-                    <Trash2 size={16} color={COLORS.error} />
+                  <TouchableOpacity onPress={() => handleDelete(item)} style={styles.actionBtn}>
+                    <Trash2 size={15} color={COLORS.error} />
                   </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Stats Footer */}
               <View style={styles.cardFooter}>
                 <View style={styles.metricItem}>
                   <Briefcase size={13} color={COLORS.textMuted} />
@@ -264,7 +266,7 @@ export default function PlatformsScreen() {
         }
       />
 
-      {/* Add / Edit Platform Modal */}
+      {/* Edit / Add Platform Modal (Matching Web Exactly) */}
       <Modal
         visible={modalVisible}
         transparent
@@ -290,25 +292,45 @@ export default function PlatformsScreen() {
               ) : null}
 
               <Input
-                label="Platform Name *"
-                placeholder="e.g. LinkedIn, Wellfound, Indeed"
+                label="PLATFORM NAME *"
+                placeholder="e.g. LinkedIn, Wellfound"
                 value={name}
                 onChangeText={setName}
               />
 
               <Input
-                label="Website URL"
+                label="WEBSITE URL"
                 placeholder="e.g. linkedin.com"
-                value={url}
-                onChangeText={setUrl}
+                value={website}
+                onChangeText={setWebsite}
                 autoCapitalize="none"
               />
 
-              {/* Color Theme Selector */}
-              <Text style={styles.sectionLabel}>Theme Color</Text>
+              <Input
+                label="LOGO URL (OPTIONAL)"
+                placeholder="e.g. https://domain.com/logo.png"
+                value={logo}
+                onChangeText={setLogo}
+                autoCapitalize="none"
+              />
+
+              {/* COLOR THEME + HEX + PRESETS */}
+              <Text style={styles.sectionLabel}>COLOR THEME</Text>
+              <View style={styles.colorInputRow}>
+                <View style={[styles.colorPreviewBox, { backgroundColor: color }]} />
+                <View style={{ flex: 1 }}>
+                  <Input
+                    value={color}
+                    onChangeText={setColor}
+                    placeholder="#4F46E5"
+                    style={{ marginBottom: 0 }}
+                  />
+                </View>
+              </View>
+
               <View style={styles.presetGrid}>
                 {COLOR_PRESETS.map((p) => {
-                  const isSel = color === p.hex;
+                  const isSel = color.toLowerCase() === p.hex.toLowerCase();
                   return (
                     <TouchableOpacity
                       key={p.hex}
@@ -319,13 +341,24 @@ export default function PlatformsScreen() {
                         isSel && styles.colorCircleSelected,
                       ]}
                     >
-                      {isSel && <Check size={14} color="#FFF" />}
+                      {isSel && <Check size={12} color="#FFF" />}
                     </TouchableOpacity>
                   );
                 })}
               </View>
 
-              {/* Default Toggle */}
+              {/* DESCRIPTION (OPTIONAL) */}
+              <Input
+                label="DESCRIPTION (OPTIONAL)"
+                placeholder="Keep quick notes about job boards, profiles, referral networks..."
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                numberOfLines={3}
+                style={{ height: 70, textAlignVertical: "top" }}
+              />
+
+              {/* SET AS DEFAULT PLATFORM */}
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setIsDefault(!isDefault)}
@@ -337,12 +370,20 @@ export default function PlatformsScreen() {
                 <Text style={styles.toggleLabel}>Set as Default Platform</Text>
               </TouchableOpacity>
 
-              <Button
-                title={editingPlatform ? "Update Platform" : "Save Platform"}
-                onPress={handleSubmit}
-                loading={formLoading}
-                style={{ marginTop: SPACING.md }}
-              />
+              <View style={styles.modalBtnRow}>
+                <Button
+                  title="Cancel"
+                  variant="outline"
+                  onPress={() => setModalVisible(false)}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title={editingPlatform ? "Save Platform" : "Save Platform"}
+                  onPress={handleSubmit}
+                  loading={formLoading}
+                  style={{ flex: 1 }}
+                />
+              </View>
             </ScrollView>
           </View>
         </View>
@@ -413,8 +454,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   platformIcon: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: RADIUS.md,
     borderWidth: 1,
     alignItems: "center",
@@ -521,7 +562,7 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
-    maxHeight: "85%",
+    maxHeight: "88%",
   },
   modalHeader: {
     flexDirection: "row",
@@ -538,21 +579,36 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   sectionLabel: {
-    fontSize: 13,
+    fontSize: 11,
     color: COLORS.textSecondary,
-    fontWeight: "500",
+    fontWeight: "700",
     marginBottom: SPACING.xs,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  colorInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: SPACING.sm,
+  },
+  colorPreviewBox: {
+    width: 48,
+    height: 48,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
   presetGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
     marginBottom: SPACING.md,
   },
   colorCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -565,7 +621,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     paddingVertical: SPACING.xs,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   checkbox: {
     width: 20,
@@ -585,6 +641,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.text,
     fontWeight: "500",
+  },
+  modalBtnRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: SPACING.sm,
   },
   errorBox: {
     backgroundColor: "rgba(239, 68, 68, 0.15)",
